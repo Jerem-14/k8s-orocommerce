@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cache-{{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "orocommerce.name" . }}
+    {{- include "orocommerce.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.storage.cache.size | default "5Gi" }}
+  {{- if .Values.storage.cache.storageClass }}
+  storageClassName: {{ .Values.storage.cache.storageClass }}
+  {{- end }}

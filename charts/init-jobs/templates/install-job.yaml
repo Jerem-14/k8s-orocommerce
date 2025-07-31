@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: oro-install
+  namespace: {{ .Release.Namespace }}
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: install
+          image: {{ .Values.install.image }}
+          command: {{ .Values.install.command | toJson }}
+          args: {{ .Values.install.args | toJson }}
+          env:
+            {{- toYaml .Values.install.env | nindent 12 }}
+          volumeMounts:
+            {{- toYaml .Values.install.volumeMounts | nindent 12 }}
+      volumes:
+        {{- toYaml .Values.install.volumes | nindent 8 }}

@@ -1,0 +1,57 @@
+{{- if .Values.jobs.install.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "orocommerce.fullname" . }}-install
+  labels:
+    {{- include "orocommerce.labels" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "orocommerce.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: default
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.35
+        command: ["sh", "-c", "until nc -z database-orocommerce 5432; do echo 'Waiting for database...'; sleep 2; done"]
+      containers:
+      - name: install
+        image: "oroinc/orocommerce-application:6.1.0"
+        command: ["/usr/local/bin/docker-entrypoint.sh"]
+        args: ["install", "--no-interaction"]
+        envFrom:
+        - configMapRef:
+            name: {{ include "orocommerce.fullname" . }}-global-config
+        env:
+        {{- range $key, $value := .Values.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        - name: ORO_SAMPLE_DATA
+          value: ""
+        volumeMounts:
+        - name: oro-app
+          mountPath: /var/www/oro
+        - name: cache
+          mountPath: /var/www/oro/var/cache
+        - name: public-storage
+          mountPath: /var/www/oro/public/media
+        - name: private-storage
+          mountPath: /var/www/oro/var/data
+      volumes:
+      - name: oro-app
+        persistentVolumeClaim:
+          claimName: oro-app-{{ .Release.Name }}
+      - name: cache
+        persistentVolumeClaim:
+          claimName: cache-{{ .Release.Name }}
+      - name: public-storage
+        persistentVolumeClaim:
+          claimName: public-storage-{{ .Release.Name }}
+      - name: private-storage
+        persistentVolumeClaim:
+          claimName: private-storage-{{ .Release.Name }}
+{{- end }} 

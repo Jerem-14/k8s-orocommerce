@@ -1,0 +1,100 @@
+{{- if .Values.jobs.restoreInit.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "orocommerce.fullname" . }}-restore-init
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "orocommerce.name" . }}
+    {{- include "orocommerce.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 100
+  template:
+    metadata:
+      labels:
+        app: {{ include "orocommerce.name" . }}-restore-init
+        {{- include "orocommerce.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.35
+        command: ["sh", "-c", "until nc -z database-orocommerce 5432; do echo 'Waiting for database...'; sleep 5; done"]
+      - name: volume-init
+        image: oroinc/orocommerce-application-init:6.1.0
+        args: 
+          - "-c"
+          - "cp -rp /var/www/oro/. /data && chown -R www-data:www-data /data && chmod -R 755 /data && setfacl -R -m u:www-data:rwx /data && setfacl -R -m d:u:www-data:rwx /data"
+        volumeMounts:
+        - name: oro-app
+          mountPath: /data
+        - name: cache
+          mountPath: /data/var/cache
+        - name: public-storage
+          mountPath: /data/public/media
+        - name: private-storage
+          mountPath: /data/var/private
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+      # Temporairement désactivé pour tester l'installation
+      # - name: wait-for-mail
+      #   image: busybox:1.35
+      #   command: ["sh", "-c", "until nc -z orocommerce-mail 1025; do echo 'Waiting for mail service...'; sleep 5; done"]
+      containers:
+      - name: restore
+        image: "oroinc/orocommerce-application-init:6.1.0"
+        imagePullPolicy: IfNotPresent
+        command: 
+        - sh
+        - -c
+        - |
+          until nc -z database-orocommerce 5432; do echo 'Waiting for database...'; sleep 5; done
+          echo "Starting restore process..."
+          if docker-entrypoint.sh restore; then
+            echo "Restore completed successfully"
+            chown -R www-data:www-data /var/www/oro
+            echo "Permissions updated successfully"
+          else
+            echo "Restore failed, but keeping container running for debugging"
+            echo "You can now exec into this container to investigate"
+            # Keep container running for debugging
+            tail -f /dev/null
+          fi
+        envFrom:
+        - configMapRef:
+            name: {{ include "orocommerce.fullname" . }}-global-config
+        volumeMounts:
+        - name: oro-app
+          mountPath: /var/www/oro
+        - name: cache
+          mountPath: /var/www/oro/var/cache
+        - name: public-storage
+          mountPath: /var/www/oro/public/media
+        - name: private-storage
+          mountPath: /var/www/oro/var/data
+        resources:
+          requests:
+            memory: "500Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+      volumes:
+      - name: oro-app
+        persistentVolumeClaim:
+          claimName: oro-app-orocommerce
+      - name: cache
+        persistentVolumeClaim:
+          claimName: cache-orocommerce
+      - name: public-storage
+        persistentVolumeClaim:
+          claimName: public-storage-orocommerce
+      - name: private-storage
+        persistentVolumeClaim:
+          claimName: private-storage-orocommerce
+{{- end }} 

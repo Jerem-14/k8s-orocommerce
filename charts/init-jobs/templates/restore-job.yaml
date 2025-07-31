@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: oro-restore
+  namespace: {{ .Release.Namespace }}
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: restore
+          image: {{ .Values.restore.image }}
+          command: {{ .Values.restore.command | toJson }}
+          args: {{ .Values.restore.args | toJson }}
+          env:
+            {{- toYaml .Values.restore.env | nindent 12 }}
+          volumeMounts:
+            {{- toYaml .Values.restore.volumeMounts | nindent 12 }}
+      volumes:
+        {{- toYaml .Values.restore.volumes | nindent 8 }}

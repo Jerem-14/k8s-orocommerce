@@ -1,0 +1,59 @@
+replicaCount: 1
+
+image:
+  repository: oroinc/orocommerce-application
+  tag: 6.1.0
+  pullPolicy: IfNotPresent
+
+service:
+  port: 80
+  type: ClusterIP
+
+initContainers:
+  - name: web-init
+    image: oroinc/orocommerce-application:6.1.0
+    command:
+      - /bin/sh
+      - -c
+      - |
+        /usr/local/bin/docker-entrypoint.sh nginx-init && sed -i '/gridfs/d; /mongo/d' /opt/oro-nginx/etc/sites-available/*.conf
+    volumeMounts:
+      - name: nginx-config
+        mountPath: /opt/oro-nginx
+
+volumeMounts:
+  - name: oro-app
+    mountPath: /var/www/oro
+  - name: nginx-config
+    mountPath: /opt/oro-nginx
+
+volumes:
+  - name: oro-app
+    persistentVolumeClaim:
+      claimName: pvc-oro-app
+  - name: nginx-config
+    emptyDir: {}
+
+serviceAccount:
+  create: false
+  annotations: {}
+  automount: true
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: example.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+autoscaling:
+  enabled: false
+
+command:
+  - nginx
+  - -g
+  - daemon off;

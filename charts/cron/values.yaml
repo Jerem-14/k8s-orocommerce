@@ -1,0 +1,14 @@
+volumeInit:
+  image: oroinc/orocommerce-application:6.1.0
+  command:
+    - sh
+    - -c
+    - cp -R /var/www/oro/. /mnt/oro_app
+
+command:
+  - cron
+
+serviceAccount:
+  create: false
+  annotations: {}
+  automount: true

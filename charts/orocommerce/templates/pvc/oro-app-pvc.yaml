@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: oro-app-{{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "orocommerce.name" . }}
+    {{- include "orocommerce.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.storage.oroApp.size | default "10Gi" }}
+  {{- if .Values.storage.oroApp.storageClass }}
+  storageClassName: {{ .Values.storage.oroApp.storageClass }}
+  {{- end }} 

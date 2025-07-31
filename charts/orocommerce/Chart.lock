@@ -1,0 +1,24 @@
+dependencies:
+- name: webserver
+  repository: file://../webserver
+  version: 0.1.0
+- name: database
+  repository: file://../database
+  version: 0.1.0
+- name: php-fpm
+  repository: file://../php-fpm
+  version: 0.1.0
+- name: websocket
+  repository: file://../websocket
+  version: 0.1.0
+- name: mail
+  repository: file://../mail
+  version: 0.1.0
+- name: cron
+  repository: file://../cron
+  version: 0.1.0
+- name: consumer
+  repository: file://../consumer
+  version: 0.1.0
+digest: sha256:da62ad66471a3ddb06b39dec50e91ae8549298a5bde7747ae986b7a70adedf95
+generated: "2025-07-28T23:06:42.784579601+02:00"

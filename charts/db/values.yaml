@@ -1,0 +1,17 @@
+image:
+  repository: docker.io/oroinc/pgsql
+  tag: "17.2"
+  pullPolicy: IfNotPresent
+
+auth:
+  username: oro
+  password: oro
+  database: oro
+
+service:
+  type: ClusterIP
+  port: 5432
+
+persistence:
+  enabled: true
+  size: 5Gi

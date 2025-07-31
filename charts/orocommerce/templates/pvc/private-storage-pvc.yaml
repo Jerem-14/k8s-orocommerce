@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: private-storage-{{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "orocommerce.name" . }}
+    {{- include "orocommerce.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.storage.privateStorage.size | default "10Gi" }}
+  {{- if .Values.storage.privateStorage.storageClass }}
+  storageClassName: {{ .Values.storage.privateStorage.storageClass }}
+  {{- end }} 

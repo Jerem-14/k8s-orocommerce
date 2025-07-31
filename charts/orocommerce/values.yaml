@@ -1,0 +1,115 @@
+# Configuration des volumes persistants
+storage:
+  oroApp:
+    size: "10Gi"
+    storageClass: ""
+  cache:
+    size: "5Gi"
+    storageClass: ""
+  maintenance:
+    size: "1Gi"
+    storageClass: ""
+  publicStorage:
+    size: "20Gi"
+    storageClass: ""
+  privateStorage:
+    size: "10Gi"
+    storageClass: ""
+
+rootSecurityContext:
+  runAsUser: 0
+
+# Configuration des Jobs d'initialisation
+jobs:
+  volumeInit:
+    enabled: true
+    # Le Job d'initialisation des volumes s'exécute toujours au premier install
+  install:
+    enabled: true
+    # Le Job d'installation s'exécute seulement au premier install
+    # Pour forcer une installation lors d'un upgrade, mettre à false puis true
+  restoreInit:
+    enabled: true
+    # Le Job de restauration s'exécute seulement au premier install
+    # Pour forcer une restauration lors d'un upgrade, mettre à false puis true
+  cleanupVolumes:
+    enabled: false
+    # Le Job de nettoyage s'exécute avant helm uninstall
+    # Pour supprimer automatiquement les volumes, mettre à true
+
+# Configuration des sous-charts
+webserver:
+  enabled: true
+  volumes:
+    oroApp:
+      claimName: "oro-app-orocommerce"
+    cache:
+      claimName: "cache-orocommerce"
+    maintenance:
+      claimName: "maintenance-orocommerce"
+    publicStorage:
+      claimName: "public-storage-orocommerce"
+    privateStorage:
+      claimName: "private-storage-orocommerce"
+
+database:
+  enabled: true
+
+php-fpm:
+  enabled: true
+  volumes:
+    oroApp:
+      claimName: "oro-app-orocommerce"
+    cache:
+      claimName: "cache-orocommerce"
+    maintenance:
+      claimName: "maintenance-orocommerce"
+    publicStorage:
+      claimName: "public-storage-orocommerce"
+    privateStorage:
+      claimName: "private-storage-orocommerce"
+
+websocket:
+  enabled: true
+  volumes:
+    oroApp:
+      claimName: "oro-app-orocommerce"
+    cache:
+      claimName: "cache-orocommerce"
+    maintenance:
+      claimName: "maintenance-orocommerce"
+    publicStorage:
+      claimName: "public-storage-orocommerce"
+    privateStorage:
+      claimName: "private-storage-orocommerce"
+
+consumer:
+  enabled: true
+  volumes:
+    oroApp:
+      claimName: "oro-app-orocommerce"
+    cache:
+      claimName: "cache-orocommerce"
+    maintenance:
+      claimName: "maintenance-orocommerce"
+    publicStorage:
+      claimName: "public-storage-orocommerce"
+    privateStorage:
+      claimName: "private-storage-orocommerce"
+
+cron:
+  enabled: true
+  volumes:
+    oroApp:
+      claimName: "oro-app-orocommerce"
+    cache:
+      claimName: "cache-orocommerce"
+    maintenance:
+      claimName: "maintenance-orocommerce"
+    publicStorage:
+      claimName: "public-storage-orocommerce"
+    privateStorage:
+      claimName: "private-storage-orocommerce"
+
+mail:
+  enabled: true

@@ -1,0 +1,98 @@
+replicaCount: 2
+
+image:
+  repository: oroinc/orocommerce-application
+  tag: 6.1.0
+  pullPolicy: IfNotPresent
+
+service:
+  port: 9000
+  type: ClusterIP
+
+env:
+  - name: ORO_ENV
+    value: prod
+  - name: ORO_LOG_PATH
+    value: "php://stderr"
+
+volumeMounts:
+  - name: oro-app
+    mountPath: /var/www/oro
+  - name: cache
+    mountPath: /var/www/oro/var/cache
+  - name: maintenance
+    mountPath: /var/www/oro/var/maintenance
+  - name: public-storage
+    mountPath: /var/www/oro/public/media
+  - name: private-storage
+    mountPath: /var/www/oro/var/data
+
+volumes:
+  - name: oro-app
+    persistentVolumeClaim:
+      claimName: pvc-oro-app
+  - name: cache
+    persistentVolumeClaim:
+      claimName: pvc-cache
+  - name: maintenance
+    persistentVolumeClaim:
+      claimName: pvc-maintenance
+  - name: public-storage
+    persistentVolumeClaim:
+      claimName: pvc-public-storage
+  - name: private-storage
+    persistentVolumeClaim:
+      claimName: pvc-private-storage
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi
+
+readinessProbe:
+  exec:
+    command: [ "php-fpm-healthcheck" ]
+  initialDelaySeconds: 15
+  periodSeconds: 10
+
+livenessProbe:
+  exec:
+    command: [ "php-fpm-healthcheck" ]
+  initialDelaySeconds: 15
+  periodSeconds: 10
+
+serviceAccount:
+  create: false
+  annotations: {}
+  automount: true
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: example.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+autoscaling:
+  enabled: false
+
+initContainers:
+  - name: volume-init
+    image: oroinc/orocommerce-application:6.1.0
+    command:
+      - sh
+      - -c
+      - cp -R /var/www/oro/. /mnt/oro_app
+    volumeMounts:
+      - name: oro-app
+        mountPath: /mnt/oro_app
+
+command:
+  - php-fpm

@@ -1,0 +1,34 @@
+apiVersion: v2
+name: orocommerce
+version: 0.1.0
+description: A Helm chart for deploying OroCommerce
+
+dependencies:
+  - name: webserver
+    version: 0.1.0
+    repository: file://../webserver
+    condition: webserver.enabled
+  - name: database
+    version: 0.1.0
+    repository: file://../database
+    condition: database.enabled
+  - name: php-fpm
+    version: 0.1.0
+    repository: file://../php-fpm
+    condition: php-fpm.enabled
+  - name: websocket
+    version: 0.1.0
+    repository: file://../websocket
+    condition: websocket.enabled
+  - name: mail
+    version: 0.1.0
+    repository: file://../mail
+    condition: mail.enabled
+  - name: cron
+    version: 0.1.0
+    repository: file://../cron
+    condition: cron.enabled
+  - name: consumer
+    version: 0.1.0
+    repository: file://../consumer
+    condition: consumer.enabled

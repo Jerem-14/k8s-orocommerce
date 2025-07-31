@@ -1,0 +1,101 @@
+image:
+  repository: oroinc/orocommerce-application
+  tag: "6.1.0"
+  pullPolicy: IfNotPresent
+
+volumeInit:
+  image: oroinc/orocommerce-application:6.1.0
+  command:
+    - sh
+    - -c
+    - cp -R /var/www/oro/. /mnt/oro_app
+service:
+  port: 9000
+  type: ClusterIP
+
+install:
+  image: oroinc/orocommerce-application:6.1.0
+  command:
+    - php
+    - bin/console
+    - oro:install
+  args:
+    - "--env=prod"
+    - "--sample-data"
+    - "--user-name=admin"
+    - "--user-password=admin"
+    - "--user-email=admin@example.com"
+    - "--organization-name=ORO"
+  env:
+    - name: ORO_ENV
+      value: prod
+  volumeMounts:
+    - name: oro-app
+      mountPath: /var/www/oro
+    - name: public-storage
+      mountPath: /var/www/oro/public/media
+    - name: private-storage
+      mountPath: /var/www/oro/var/data
+  volumes:
+    - name: oro-app
+      persistentVolumeClaim:
+        claimName: pvc-oro-app
+    - name: public-storage
+      persistentVolumeClaim:
+        claimName: pvc-public-storage
+    - name: private-storage
+      persistentVolumeClaim:
+        claimName: pvc-private-storage
+
+
+restore:
+  image: oroinc/orocommerce-application:6.1.0
+  command:
+    - restore
+  args:
+    - "--sample-data"
+  env:
+    - name: ORO_ENV
+      value: prod
+    - name: ORO_USER_NAME
+      value: admin
+    - name: ORO_USER_PASSWORD
+      value: admin
+    - name: ORO_USER_EMAIL
+      value: admin@example.com
+  volumeMounts:
+    - name: oro-app
+      mountPath: /var/www/oro
+    - name: public-storage
+      mountPath: /var/www/oro/public/media
+    - name: private-storage
+      mountPath: /var/www/oro/var/data
+  volumes:
+    - name: oro-app
+      persistentVolumeClaim:
+        claimName: pvc-oro-app
+    - name: public-storage
+      persistentVolumeClaim:
+        claimName: pvc-public-storage
+    - name: private-storage
+      persistentVolumeClaim:
+        claimName: pvc-private-storage
+
+serviceAccount:
+  create: false
+  annotations: {}
+  automount: true
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: example.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+autoscaling:
+  enabled: false

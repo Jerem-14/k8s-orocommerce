@@ -1,0 +1,127 @@
+{{- if .Values.jobs.volumeInit.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "orocommerce.fullname" . }}-volume-init-job
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "orocommerce.name" . }}
+    {{- include "orocommerce.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 900
+  ttlSecondsAfterFinished: 100
+  template:
+    metadata:
+      labels:
+        app: {{ include "orocommerce.name" . }}-volume-init
+        {{- include "orocommerce.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: volume-init
+        image: "oroinc/orocommerce-application:6.1.0"
+        imagePullPolicy: IfNotPresent
+        command: 
+        - sh
+        - -c
+        - |
+          echo "Starting volume initialization..."
+          
+          # Vérifier si l'application est déjà initialisée
+          if [ ! -f /var/www/oro/bin/console ]; then
+            echo "Volume is empty, copying OroCommerce application files..."
+            
+            # Sauvegarder le contenu du volume (qui peut avoir des dossiers créés par les PVC)
+            mkdir -p /tmp/volume-backup
+            if [ -d /var/www/oro ]; then
+              cp -a /var/www/oro/* /tmp/volume-backup/ 2>/dev/null || true
+            fi
+            
+            # Copier TOUT le contenu de l'image OroCommerce vers le volume
+            echo "Copying application files from image..."
+            cp -rf /app/* /var/www/oro/ 2>/dev/null || cp -rf /usr/src/oro/* /var/www/oro/ 2>/dev/null || echo "Using alternative copy method..."
+            
+            # Si la copie directe échoue, utiliser le docker-entrypoint
+            if [ ! -f /var/www/oro/bin/console ]; then
+              echo "Direct copy failed, using docker-entrypoint..."
+              /usr/local/bin/docker-entrypoint.sh -- true
+            fi
+            
+            # Restaurer les dossiers du volume s'ils existaient
+            if [ -d /tmp/volume-backup ]; then
+              cp -a /tmp/volume-backup/* /var/www/oro/ 2>/dev/null || true
+            fi
+            
+            # Ajuster les permissions
+            chown -R www-data:www-data /var/www/oro 2>/dev/null || true
+            chmod -R 755 /var/www/oro
+            
+            echo "Application files copied successfully!"
+          else
+            echo "Application files already exist, skipping copy..."
+          fi
+          
+          # Créer un fichier de marqueur pour indiquer que l'initialisation est terminée
+          echo "Volume initialized at $(date)" > /var/www/oro/.volume-initialized
+          echo "Initialization completed successfully" >> /var/www/oro/.volume-initialized
+          
+          # Afficher le contenu pour debug
+          echo "Final directory structure:"
+          ls -la /var/www/oro/ | head -20
+          
+          echo "Volume initialization completed!"
+          cat /var/www/oro/.volume-initialized
+        env:
+        # Variables utilisées en externe des instances
+        - name: ORO_IMAGE_TAG
+          value: "6.1.0"
+        - name: ORO_IMAGE
+          value: "oroinc/orocommerce-application"
+        - name: ORO_IMAGE_INIT
+          value: "oroinc/orocommerce-application-init"
+        - name: ORO_IMAGE_BASE_RUNTIME
+          value: "oroinc/runtime"
+        - name: ORO_BASELINE_VERSION
+          value: "6.1-latest"
+        
+        # Variables utilisées en interne dans les instances
+        - name: ORO_USER_RUNTIME
+          value: "www-data"
+        - name: ORO_ENV
+          value: "prod"
+        - name: ORO_APP_FOLDER
+          value: "/var/www/oro"
+        
+        # Configuration de la base de données
+        - name: ORO_DB_HOST
+          value: "database-orocommerce"
+        - name: ORO_DB_PORT
+          value: "5432"
+        - name: ORO_DB_NAME
+          value: "orodb"
+        - name: ORO_DB_USER
+          value: "orodbuser"
+        - name: ORO_DB_PASSWORD
+          value: "orodbpass"
+        - name: PGPASSWORD
+          value: "orodbpass"
+        volumeMounts:
+        - name: oro-app-storage
+          mountPath: /var/www/oro
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+      volumes:
+      - name: oro-app-storage
+        persistentVolumeClaim:
+          claimName: oro-app-{{ .Release.Name }}
+{{- end }} 
