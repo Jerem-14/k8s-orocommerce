@@ -15,3 +15,49 @@ service:
 persistence:
   enabled: true
   size: 5Gi
+
+# Configuration par défaut pour éviter les erreurs template
+replicaCount: 1
+
+autoscaling:
+  enabled: false
+
+# Service account
+serviceAccount:
+  create: false
+  annotations: {}
+
+# Configuration des volumes pour PostgreSQL
+volumeMounts:
+  - name: postgres-data
+    mountPath: /var/lib/postgresql/data
+
+volumes:
+  - name: postgres-data
+    persistentVolumeClaim:
+      claimName: pvc-postgres-data
+
+# Variables d'environnement PostgreSQL
+env:
+  - name: POSTGRES_DB
+    value: "oro"
+  - name: POSTGRES_USER
+    value: "oro"
+  - name: POSTGRES_PASSWORD
+    value: "oro"
+  - name: PGDATA
+    value: "/var/lib/postgresql/data/pgdata"
+
+# Configuration ingress
+ingress:
+  enabled: false
+
+# Configuration par défaut pour éviter les erreurs
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+podLabels: {}
+resources: {}
+livenessProbe: {}
+readinessProbe: {}

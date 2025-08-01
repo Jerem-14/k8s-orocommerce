@@ -1,9 +1,12 @@
-# k8s/pvc.yaml
+# PVC pour OroCommerce - Approche charts individuels
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: pvc-oro-app
   namespace: orocommerce
+  labels:
+    app: orocommerce
+    component: storage
 spec:
   accessModes:
     - ReadWriteOnce
@@ -17,6 +20,9 @@ kind: PersistentVolumeClaim
 metadata:
   name: pvc-cache
   namespace: orocommerce
+  labels:
+    app: orocommerce
+    component: storage
 spec:
   accessModes:
     - ReadWriteOnce
@@ -30,6 +36,9 @@ kind: PersistentVolumeClaim
 metadata:
   name: pvc-maintenance
   namespace: orocommerce
+  labels:
+    app: orocommerce
+    component: storage
 spec:
   accessModes:
     - ReadWriteOnce
@@ -43,6 +52,9 @@ kind: PersistentVolumeClaim
 metadata:
   name: pvc-public-storage
   namespace: orocommerce
+  labels:
+    app: orocommerce
+    component: storage
 spec:
   accessModes:
     - ReadWriteOnce
@@ -56,9 +68,29 @@ kind: PersistentVolumeClaim
 metadata:
   name: pvc-private-storage
   namespace: orocommerce
+  labels:
+    app: orocommerce
+    component: storage
 spec:
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
       storage: 10Gi
+
+---
+# PVC pour PostgreSQL (ajout nécessaire)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-postgres-data
+  namespace: orocommerce
+  labels:
+    app: orocommerce
+    component: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi

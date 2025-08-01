@@ -11,78 +11,72 @@ graph TB
     subgraph "External Access"
         user[👤 User]
         admin[👤 Admin]
-        ingress[Ingress Controller]
     end
     
-    subgraph "Kubernetes Cluster"
-        subgraph "OroCommerce Namespace"
+    subgraph "Kubernetes Cluster (namespace: default)"
+        subgraph "OroCommerce Application"
             subgraph "Frontend Layer"
-                nginx[Nginx Webserver<br/>Deployment]
+                nginx[webserver<br/>Nginx Deployment<br/>✅ Running]
             end
             
             subgraph "Application Layer"
-                phpfpm[PHP-FPM<br/>Deployment + HPA]
-                consumer[Consumer<br/>Deployment]
-                websocket[WebSocket<br/>Deployment]
-                cron[Cron Jobs<br/>Deployment]
+                phpfpm[orocommerce-app-php-fpm<br/>PHP-FPM Deployment<br/>✅ Running]
+                websocket[orocommerce-websocket<br/>WebSocket Deployment<br/>✅ Running]
             end
             
             subgraph "Database Layer"
-                postgres[PostgreSQL<br/>StatefulSet]
-                redis[Redis<br/>StatefulSet]
-                elasticsearch[Elasticsearch<br/>StatefulSet]
+                postgres[database-orocommerce<br/>PostgreSQL Deployment<br/>✅ Running]
             end
             
             subgraph "Storage Layer"
-                pvc1[oro-app PVC]
-                pvc2[cache PVC]
-                pvc3[public-storage PVC]
-                pvc4[private-storage PVC]
-                pvc5[maintenance PVC]
-            end
-            
-            subgraph "Configuration"
-                configmap[Global ConfigMap]
-                secrets[Database Secrets]
+                pvc1[pvc-oro-app<br/>10Gi]
+                pvc2[pvc-cache<br/>5Gi]
+                pvc3[pvc-public-storage<br/>20Gi]
+                pvc4[pvc-private-storage<br/>10Gi]
+                pvc5[pvc-maintenance<br/>1Gi]
+                pvc6[pvc-postgres-data<br/>Auto-created]
             end
             
             subgraph "Initialization"
-                initjobs[Init Jobs<br/>Job Resources]
+                initjobs[init-jobs<br/>volume-init ✅ Complete<br/>oro-restore ⏳ Running]
             end
         end
         
-        subgraph "Monitoring Namespace"
-            prometheus[Prometheus<br/>Deployment]
-            grafana[Grafana<br/>Deployment]
-            alertmanager[AlertManager<br/>Deployment]
+        subgraph "Monitoring Stack"
+            prometheus[prometheus-prometheus<br/>Prometheus Deployment<br/>✅ Running]
+            grafana[monitoring-grafana<br/>Grafana Deployment<br/>✅ Running]
+            alertmanager[alertmanager-prometheus<br/>AlertManager StatefulSet<br/>✅ Running]
         end
     end
     
-    user --> ingress
-    admin --> ingress
-    ingress --> nginx
-    nginx --> phpfpm
-    phpfpm --> postgres
-    phpfpm --> redis
-    phpfpm --> elasticsearch
+    subgraph "Port Forwards"
+        pf1[localhost:8080 → webserver:80]
+        pf2[localhost:3000 → grafana:80]
+        pf3[localhost:9090 → prometheus:9090]
+        pf4[localhost:5432 → postgres:5432]
+    end
     
-    consumer --> postgres
-    consumer --> redis
+    user --> pf1
+    admin --> pf2
+    admin --> pf3
+    admin --> pf4
+    
+    pf1 --> nginx
+    pf2 --> grafana
+    pf3 --> prometheus
+    pf4 --> postgres
+    
+    nginx --> phpfpm
+    nginx --> websocket
+    phpfpm --> postgres
     websocket --> phpfpm
-    cron --> postgres
     
     phpfpm --> pvc1
     phpfpm --> pvc2
-    nginx --> pvc3
-    nginx --> pvc4
-    
-    configmap -.-> phpfpm
-    configmap -.-> nginx
-    configmap -.-> consumer
-    configmap -.-> websocket
-    configmap -.-> cron
-    
-    secrets -.-> postgres
+    phpfpm --> pvc3
+    phpfpm --> pvc4
+    nginx --> pvc1
+    postgres --> pvc6
     
     initjobs --> pvc1
     initjobs --> pvc2
@@ -171,71 +165,105 @@ graph TB
     elastic_sts --> elastic_pvc
 ```
 
-## 🔧 Helm Charts Structure
+## 🔧 Helm Charts Structure - Déploiement Individuel
+
+**Approche utilisée** : Installation directe des charts individuels (pas d'umbrella chart)
 
 ```mermaid
 graph TD
-    subgraph "Main Chart: orocommerce"
-        main_chart[orocommerce/<br/>Chart.yaml<br/>values.yaml]
-        
-        subgraph "Sub-charts"
-            web_chart[web/<br/>Nginx deployment]
-            phpfpm_chart[php-fpm/<br/>Application deployment]
-            db_chart[db/<br/>PostgreSQL deployment]
-            consumer_chart[consumer/<br/>Background processing]
-            ws_chart[ws/<br/>WebSocket server]
-            cron_chart[cron/<br/>Scheduled tasks]
-            init_chart[init-jobs/<br/>Initialization]
+    subgraph "Charts Déployés Individuellement"
+        subgraph "Infrastructure"
+            pvc_k8s[k8s/pvc.yaml<br/>📦 PVCs principaux<br/>kubectl apply]
         end
         
-        subgraph "External Charts"
-            monitoring_chart[monitoring/<br/>Prometheus + Grafana]
+        subgraph "Database Layer"
+            db_chart[charts/db/<br/>🗄️ database<br/>helm install database]
+        end
+        
+        subgraph "Initialization"
+            init_chart[charts/init-jobs/<br/>⚙️ init-jobs<br/>helm install init-jobs]
+        end
+        
+        subgraph "Application Layer"
+            phpfpm_chart[charts/php-fpm/<br/>🐘 orocommerce-app<br/>helm install orocommerce-app]
+            ws_chart[charts/ws/<br/>🔌 orocommerce-websocket<br/>helm install orocommerce-websocket]
+        end
+        
+        subgraph "Frontend Layer"
+            web_chart[charts/web/<br/>🌐 webserver<br/>helm install webserver]
+        end
+        
+        subgraph "Monitoring Stack"
+            monitoring_chart[charts/monitoring/<br/>📊 monitoring<br/>helm install monitoring]
+        end
+        
+        subgraph "Manual Services"
+            websocket_alias[websocket-alias.yaml<br/>🔗 orocommerce-websocket<br/>kubectl apply]
+            manual_pvcs[Additional PVCs<br/>💾 cache + maintenance<br/>kubectl apply]
         end
     end
     
-    main_chart --> web_chart
-    main_chart --> phpfpm_chart
-    main_chart --> db_chart
-    main_chart --> consumer_chart
-    main_chart --> ws_chart
-    main_chart --> cron_chart
-    main_chart --> init_chart
+    pvc_k8s --> db_chart
+    pvc_k8s --> init_chart
+    db_chart --> init_chart
+    init_chart --> phpfpm_chart
+    phpfpm_chart --> ws_chart
+    ws_chart --> websocket_alias
+    websocket_alias --> web_chart
+    manual_pvcs --> phpfpm_chart
 ```
+
+### 📋 Ordre d'installation recommandé
+
+| Étape | Commande | Description | Dépendances |
+|-------|----------|-------------|-------------|
+| **1** | `kubectl apply -f k8s/pvc.yaml` | PVCs principaux | - |
+| **2** | `kubectl apply -f manual-pvcs.yaml` | PVCs additionnels | - |
+| **3** | `helm install database charts/db` | Base PostgreSQL | PVCs |
+| **4** | `helm install init-jobs charts/init-jobs` | Jobs d'initialisation | Database |
+| **5** | `helm install orocommerce-app charts/php-fpm` | Application PHP-FPM | Init jobs |
+| **6** | `helm install orocommerce-websocket charts/ws` | Serveur WebSocket | Application |
+| **7** | `kubectl apply -f websocket-alias.yaml` | Alias pour webserver | WebSocket |
+| **8** | `helm install webserver charts/web` | Frontend Nginx | WebSocket alias |
+| **9** | `helm install monitoring charts/monitoring` | Prometheus + Grafana | - |
 
 ## 📦 Composants Kubernetes
 
-### Deployments & StatefulSets
+### Deployments & StatefulSets - État Réel
 
-| Composant | Type | Replicas | Auto-scaling | Description |
-|-----------|------|----------|--------------|-------------|
-| **webserver** | Deployment | 1-3 | ❌ | Nginx frontend avec load balancing |
-| **php-fpm** | Deployment | 2-10 | ✅ HPA | Application principale OroCommerce |
-| **consumer** | Deployment | 1-3 | ❌ | Traitement des messages en arrière-plan |
-| **websocket** | Deployment | 1-2 | ❌ | Serveur WebSocket pour temps réel |
-| **cron** | Deployment | 1 | ❌ | Tâches planifiées et maintenance |
-| **database** | StatefulSet | 1 | ❌ | PostgreSQL avec stockage persistant |
-| **redis** | StatefulSet | 1 | ❌ | Cache et stockage de sessions |
-| **elasticsearch** | StatefulSet | 1 | ❌ | Moteur de recherche |
+| Composant | Type | Replicas | Auto-scaling | Release Helm | Description |
+|-----------|------|----------|--------------|--------------|-------------|
+| **webserver** | Deployment | 1 | ❌ | `webserver` | Nginx frontend ✅ Running |
+| **orocommerce-app** | Deployment | 2 | ❌ | `orocommerce-app` | Application PHP-FPM ✅ Running |
+| **orocommerce-websocket** | Deployment | 1 | ❌ | `orocommerce-websocket` | Serveur WebSocket ✅ Running |
+| **database-orocommerce** | Deployment | 1 | ❌ | `database` | PostgreSQL ✅ Running |
+| **init-jobs** | Deployment | 1 | ❌ | `init-jobs` | Jobs d'initialisation ⚠️ Failed |
+| **monitoring-grafana** | Deployment | 1 | ❌ | `monitoring` | Grafana dashboard ✅ Running |
+| **prometheus-prometheus** | StatefulSet | 1 | ❌ | `monitoring` | Prometheus metrics ✅ Running |
+| **alertmanager-prometheus** | StatefulSet | 1 | ❌ | `monitoring` | AlertManager ✅ Running |
 
-### Services
+### Services - Noms Réels
 
-| Service | Type | Port | Target | Description |
-|---------|------|------|--------|-------------|
-| **webserver-svc** | ClusterIP | 80 | nginx:80 | Frontend HTTP |
-| **php-fpm-svc** | ClusterIP | 9000 | php-fpm:9000 | Application FastCGI |
-| **database-svc** | ClusterIP | 5432 | postgres:5432 | Base de données |
-| **redis-svc** | ClusterIP | 6379 | redis:6379 | Cache Redis |
-| **websocket-svc** | ClusterIP | 8080 | websocket:8080 | WebSocket server |
+| Service | Type | Port | Target | Helm Release | Description |
+|---------|------|------|--------|--------------|-------------|
+| **webserver** | ClusterIP | 80 | nginx:80 | `webserver` | Frontend HTTP |
+| **orocommerce-app-php-fpm** | ClusterIP | 9000 | php-fpm:9000 | `orocommerce-app` | Application FastCGI |
+| **orocommerce-websocket** | ClusterIP | 80 | websocket:80 | Manuel | Alias pour webserver |
+| **orocommerce-websocket-ws** | ClusterIP | 80 | websocket:80 | `orocommerce-websocket` | WebSocket réel |
+| **database-orocommerce** | ClusterIP | 5432 | postgres:5432 | `database` | Base de données |
+| **monitoring-grafana** | ClusterIP | 80 | grafana:3000 | `monitoring` | Grafana interface |
+| **prometheus-prometheus** | ClusterIP | 9090 | prometheus:9090 | `monitoring` | Prometheus API |
 
-### Persistent Volume Claims
+### Persistent Volume Claims - Configuration Réelle
 
-| PVC | Taille | Mode d'accès | Utilisé par | Description |
-|-----|--------|--------------|-------------|-------------|
-| **oro-app** | 10Gi | ReadWriteMany | php-fpm, consumer, cron, websocket | Code application OroCommerce |
-| **cache** | 5Gi | ReadWriteMany | php-fpm | Cache temporaire |
-| **public-storage** | 20Gi | ReadWriteMany | webserver | Assets publics (images, CSS, JS) |
-| **private-storage** | 10Gi | ReadWriteMany | webserver | Fichiers protégés |
-| **maintenance** | 1Gi | ReadWriteOnce | init-jobs | Scripts de maintenance |
+| PVC | Taille | Mode d'accès | Créé par | Utilisé par | Description |
+|-----|--------|--------------|----------|-------------|-------------|
+| **pvc-oro-app** | 10Gi | RWO | `k8s/pvc.yaml` | php-fpm, nginx | Code application OroCommerce |
+| **pvc-cache** | 5Gi | RWO | Manuel | php-fpm | Cache temporaire |
+| **pvc-public-storage** | 20Gi | RWO | `k8s/pvc.yaml` | nginx | Assets publics (images, CSS, JS) |
+| **pvc-private-storage** | 10Gi | RWO | `k8s/pvc.yaml` | nginx | Fichiers protégés |
+| **pvc-maintenance** | 1Gi | RWO | Manuel | init-jobs | Scripts de maintenance |
+| **postgresql-data-database-orocommerce** | 8Gi | RWO | Auto (database chart) | postgres | Données PostgreSQL |
 
 ## 🔐 Configuration et Secrets
 
@@ -319,47 +347,78 @@ graph TB
     prometheus --> alertmanager
 ```
 
-## 🔄 Flux de Données
+## 🔄 Flux de Données - Architecture Réelle
 
-### Requête utilisateur standard
+### Requête utilisateur standard (Port-Forward)
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant Ingress
-    participant Nginx
-    participant PHP-FPM
-    participant PostgreSQL
-    participant Redis
+    participant PortForward as Port-Forward<br/>localhost:8080
+    participant Nginx as webserver<br/>(Nginx)
+    participant PHP-FPM as orocommerce-app-php-fpm<br/>(PHP-FPM)
+    participant WebSocket as orocommerce-websocket<br/>(WebSocket)
+    participant PostgreSQL as database-orocommerce<br/>(PostgreSQL)
     
-    User->>Ingress: HTTP Request
-    Ingress->>Nginx: Route request
+    User->>PortForward: HTTP Request<br/>http://localhost:8080
+    PortForward->>Nginx: Forward to webserver:80
     Nginx->>Nginx: Serve static files OR
-    Nginx->>PHP-FPM: Forward PHP request
-    PHP-FPM->>PostgreSQL: Database query
-    PHP-FPM->>Redis: Session/cache lookup
-    Redis-->>PHP-FPM: Cache data
+    Nginx->>PHP-FPM: Forward PHP request<br/>orocommerce-app-php-fpm:9000
+    PHP-FPM->>PostgreSQL: Database query<br/>database-orocommerce:5432
     PostgreSQL-->>PHP-FPM: Query result
     PHP-FPM-->>Nginx: Response
-    Nginx-->>Ingress: HTTP Response
-    Ingress-->>User: Final response
+    Nginx-->>PortForward: HTTP Response
+    PortForward-->>User: Final response
+    
+    Note over Nginx,WebSocket: WebSocket connections<br/>for real-time features
+    Nginx->>WebSocket: WebSocket upgrade<br/>orocommerce-websocket:80
 ```
 
-### Traitement asynchrone
+### Accès aux outils de monitoring
 
 ```mermaid
 sequenceDiagram
-    participant PHP-FPM
-    participant Redis as Redis Queue
-    participant Consumer
-    participant PostgreSQL
+    participant Admin
+    participant GrafanaPF as Port-Forward<br/>localhost:3000
+    participant Grafana as monitoring-grafana<br/>(Grafana)
+    participant PrometheusPF as Port-Forward<br/>localhost:9090
+    participant Prometheus as prometheus-prometheus<br/>(Prometheus)
+    participant App as Application Pods
     
-    PHP-FPM->>Redis: Add message to queue
-    Consumer->>Redis: Poll for messages
-    Redis-->>Consumer: Return message
-    Consumer->>PostgreSQL: Process business logic
-    Consumer->>Consumer: Update job status
-    PostgreSQL-->>Consumer: Confirm update
+    Admin->>GrafanaPF: Access dashboards<br/>http://localhost:3000
+    GrafanaPF->>Grafana: Forward to grafana:80
+    Grafana->>Prometheus: Query metrics<br/>prometheus-prometheus:9090
+    
+    Admin->>PrometheusPF: Direct metrics access<br/>http://localhost:9090
+    PrometheusPF->>Prometheus: Forward to prometheus:9090
+    
+    Prometheus->>App: Scrape metrics<br/>/metrics endpoints
+    App-->>Prometheus: Return metrics
+    Prometheus-->>Grafana: Metrics data
+    Grafana-->>GrafanaPF: Dashboard display
+    GrafanaPF-->>Admin: Visual dashboards
+```
+
+### Jobs d'initialisation
+
+```mermaid
+sequenceDiagram
+    participant Helm as Helm Install
+    participant InitJobs as init-jobs<br/>Deployment
+    participant VolumeInit as volume-init<br/>Job (✅ Complete)
+    participant OroRestore as oro-restore<br/>Job (⏳ Running)
+    participant PVCs as Persistent Volumes
+    participant Database as database-orocommerce
+    
+    Helm->>InitJobs: Deploy init-jobs chart
+    InitJobs->>VolumeInit: Create volume-init job
+    VolumeInit->>PVCs: Initialize shared volumes<br/>pvc-oro-app, pvc-cache, etc.
+    VolumeInit-->>InitJobs: ✅ Volume setup complete
+    
+    InitJobs->>OroRestore: Create oro-restore job
+    OroRestore->>Database: Connect to PostgreSQL<br/>database-orocommerce:5432
+    OroRestore->>OroRestore: ⏳ Restore process running
+    Note over OroRestore: Job en cours d'exécution
 ```
 
 ## 🏷️ Labels et Sélecteurs
@@ -492,11 +551,13 @@ spec:
 - **PodDisruptionBudgets** : Protection contre les interruptions
 - **Multi-AZ deployment** : Répartition sur plusieurs zones
 
----
+## 🎯 État du Déploiement
 
-Cette architecture Kubernetes moderne offre :
-- ✅ **Scalabilité** automatique avec HPA
-- ✅ **Résilience** avec redondance et health checks
-- ✅ **Observabilité** complète avec monitoring
-- ✅ **Sécurité** avec isolation et secrets
-- ✅ **Maintenance** simplifiée avec Helm Charts
+### ✅ Services Opérationnels
+
+| Service | URL d'accès | Status | Remarques |
+|---------|-------------|--------|-----------|
+| **OroCommerce App** | http://localhost:8080 | ✅ Running | Application principale accessible |
+| **Grafana Monitoring** | http://localhost:3000 | ✅ Running | admin/admin - 6+ heures de métriques disponibles |
+| **Prometheus Metrics** | http://localhost:9090 | ✅ Running | Collecte active des métriques |
+| **PostgreSQL Database** | localhost:5432 | ✅ Running | oro/oro - Base fonctionnelle |
