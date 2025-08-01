@@ -14,7 +14,7 @@ prometheus:
     storageSpec:
       volumeClaimTemplate:
         spec:
-          storageClassName: ""
+          storageClassName: "hostpath"
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
@@ -95,7 +95,7 @@ alertmanager:
     storage:
       volumeClaimTemplate:
         spec:
-          storageClassName: ""
+          storageClassName: "hostpath"
           accessModes: ["ReadWriteOnce"]
           resources:
             requests:
@@ -134,7 +134,7 @@ kube-prometheus-stack:
       storageSpec:
         volumeClaimTemplate:
           spec:
-            storageClassName: ""
+            storageClassName: "hostpath"
             accessModes: ["ReadWriteOnce"]
             resources:
               requests:
@@ -178,7 +178,7 @@ kube-prometheus-stack:
       storage:
         volumeClaimTemplate:
           spec:
-            storageClassName: ""
+            storageClassName: "hostpath"
             accessModes: ["ReadWriteOnce"]
             resources:
               requests:
