@@ -112,11 +112,27 @@ kubectl get servicemonitor -n orocommerce
 
 #### Option 1 : Port Forward (Développement)
 ```bash
-kubectl port-forward service/prometheus-grafana 3000:80 -n orocommerce
+kubectl port-forward service/monitoring-grafana 3000:80 -n default
 ```
 🌐 Accès : http://localhost:3000  
 👤 Username : `admin`  
 🔑 Password : `admin123`
+
+#### 📊 Localiser les Dashboards OroCommerce
+
+Une fois connecté à Grafana :
+
+1. **Menu gauche** → **Dashboards** → **Browse**
+2. Cherchez **"OroCommerce"** dans la barre de recherche
+3. Vous devriez voir 3 dashboards spécifiques :
+   - 🎯 **OroCommerce - Vue d'ensemble**
+   - 🐘 **OroCommerce - PHP-FPM Détaillé**
+   - 🗄️ **OroCommerce - Base de Données**
+
+**⚠️ Si vous ne voyez que les dashboards Kubernetes :**
+- Attendez 2-3 minutes après le démarrage de Prometheus
+- Rafraîchissez la page (F5)
+- Vérifiez que Prometheus fonctionne : Status → Configuration → Service Discovery
 
 #### Option 2 : Ingress (Production)
 ```yaml

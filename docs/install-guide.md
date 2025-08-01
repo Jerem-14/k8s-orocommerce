@@ -361,7 +361,7 @@ alertmanager:
 
 ```bash
 # Port-forward Grafana
-kubectl port-forward -n orocommerce service/monitoring-grafana 3000:80
+kubectl port-forward service/monitoring-grafana 3000:80 -n default
 
 # Accès : http://localhost:3000
 # Username: admin
@@ -578,6 +578,47 @@ helm upgrade orocommerce charts/orocommerce \
 - [ ] ✅ Les logs sont visibles
 - [ ] ✅ Les certificats SSL sont valides (si configurés)
 - [ ] ✅ Les sauvegardes sont planifiées
+
+## 🚀 Accès Rapide aux Interfaces
+
+### 📊 Grafana (Dashboards et Monitoring)
+
+```bash
+# Port-forward vers Grafana
+kubectl port-forward service/monitoring-grafana 3000:80 -n default
+```
+
+- **URL** : http://localhost:3000
+- **Username** : `admin`
+- **Password** : `admin123`
+
+**Dashboards disponibles :**
+- 🎯 **OroCommerce - Vue d'ensemble** (métriques générales)
+- 🐘 **OroCommerce - PHP-FPM Détaillé** (performance backend)
+- 🗄️ **OroCommerce - Base de Données** (métriques PostgreSQL)
+
+### 🔍 Prometheus (Métriques brutes)
+
+```bash
+# Port-forward vers Prometheus
+kubectl port-forward service/prometheus-prometheus 9090:9090 -n default
+```
+
+- **URL** : http://localhost:9090
+- **Interface** : Prometheus Query Interface
+- **Vérification** : Status → Targets (pour voir les services monitorés)
+
+### 🎯 Application OroCommerce
+
+```bash
+# Port-forward vers l'application
+kubectl port-forward service/webserver-orocommerce 8080:80 -n default
+```
+
+- **URL** : http://localhost:8080
+- **Interface** : Application OroCommerce complète
+
+---
 
 ## 🎓 Critères projet validés
 
