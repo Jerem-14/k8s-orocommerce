@@ -287,36 +287,5 @@ kubectl port-forward service/prometheus-prometheus 9091:9090 -n default
 - [Configuration avancée](docs/configuration.md)
 - [Monitoring et alertes](docs/monitoring.md)
 
-## 🎯 Critères d'Évaluation
 
-### Critère 1 : Exploiter et surveiller l'activité du système (Coeff. 1)
-- ✅ Flux de données en temps réel
-- ✅ Outils de monitoring (Prometheus/Grafana)
-- ✅ Administration des données selon les normes
-
-### Critère 2 : Optimiser l'exploitation des données (Coeff. 2)
-- ✅ Visualisation des données (Grafana dashboards)
-- ✅ Optimisation des ressources (HPA, resource limits)
-- ✅ Supervision de la répartition de charge
-
-## 📦 Composants déployés
-
-- **Frontend** : Nginx (Deployment + Service)
-- **Backend** : PHP-FPM (Deployment + HPA)
-- **Database** : PostgreSQL (StatefulSet + PVC)
-- **Cache** : Redis (StatefulSet)
-- **Search** : Elasticsearch (StatefulSet)
-- **Monitoring** : Prometheus + Grafana
-- **Ingress** : Contrôleur d'ingress configuré
-
-## 🔒 Sécurité
-
-- Secrets Kubernetes pour les mots de passe
-- SSL/TLS configuré
-- Resource limits définis
-- Namespace isolé
-
----
-
-**Projet réalisé dans le cadre du Master 2 Informatique Web - Sciences U Lyon**
 
