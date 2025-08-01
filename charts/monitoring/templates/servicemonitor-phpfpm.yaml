@@ -1,0 +1,26 @@
+{{- if and .Values.monitoring.enabled .Values.customMetrics.phpfpm.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "monitoring.fullname" . }}-phpfpm
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "monitoring.labels" . | nindent 4 }}
+    component: phpfpm
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: php-fpm
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  endpoints:
+  - port: http
+    path: /status
+    interval: {{ .Values.customMetrics.phpfpm.scrapeInterval | default "30s" }}
+    scrapeTimeout: 10s
+    params:
+      full: [""]
+      json: [""]
+  namespaceSelector:
+    matchNames:
+    - {{ .Release.Namespace }}
+{{- end }}

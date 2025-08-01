@@ -1,0 +1,194 @@
+# Configuration du monitoring OroCommerce
+monitoring:
+  enabled: true
+  namespace: "monitoring"
+
+# Configuration Prometheus
+prometheus:
+  enabled: true
+  
+  # Configuration du serveur Prometheus
+  prometheusSpec:
+    retention: 30d
+    retentionSize: "10GiB"
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: ""
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 20Gi
+    
+    # Configuration des ServiceMonitors
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    
+    # Ressources
+    resources:
+      requests:
+        memory: 400Mi
+        cpu: 100m
+      limits:
+        memory: 2Gi
+        cpu: 1000m
+
+# Configuration Grafana
+grafana:
+  enabled: true
+  
+  # Accès admin
+  adminPassword: "admin123"
+  
+  # Persistance des données
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClassName: ""
+    
+  # Configuration du service
+  service:
+    type: ClusterIP
+    port: 80
+    
+  # Ingress pour accéder à Grafana
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/rewrite-target: /
+    hosts:
+      - host: grafana.orocommerce.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+    
+  # Ressources
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+      
+  # Datasources Grafana - Prometheus configuré automatiquement
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://prometheus-server:80
+          access: proxy
+          isDefault: true
+
+# Configuration Node Exporter
+nodeExporter:
+  enabled: true
+  
+# Configuration des alertes
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: ""
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+
+# Configuration des métriques personnalisées OroCommerce
+customMetrics:
+  # Métriques Nginx
+  nginx:
+    enabled: true
+    scrapeInterval: 30s
+    
+  # Métriques PHP-FPM
+  phpfpm:
+    enabled: true
+    scrapeInterval: 30s
+    
+  # Métriques PostgreSQL
+  postgresql:
+    enabled: true
+    scrapeInterval: 30s
+    
+  # Métriques Redis (si utilisé)
+  redis:
+    enabled: false
+    scrapeInterval: 30s
+
+# Configuration Kube-Prometheus-Stack
+kube-prometheus-stack:
+  fullnameOverride: "prometheus"
+  
+  prometheus:
+    prometheusSpec:
+      retention: 30d
+      retentionSize: "10GiB"
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: ""
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 20Gi
+      serviceMonitorSelectorNilUsesHelmValues: false
+      podMonitorSelectorNilUsesHelmValues: false
+      resources:
+        requests:
+          memory: 400Mi
+          cpu: 100m
+        limits:
+          memory: 2Gi
+          cpu: 1000m
+  
+  grafana:
+    adminPassword: "admin123"
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClassName: ""
+    service:
+      type: ClusterIP
+      port: 80
+    ingress:
+      enabled: true
+      annotations:
+        kubernetes.io/ingress.class: nginx
+      hosts:
+        - grafana.orocommerce.local
+      tls: []
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+  
+  alertmanager:
+    alertmanagerSpec:
+      storage:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: ""
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 2Gi
+  
+  nodeExporter:
+    enabled: true
+    
+  kubeStateMetrics:
+    enabled: true
+    
+  prometheusOperator:
+    enabled: true

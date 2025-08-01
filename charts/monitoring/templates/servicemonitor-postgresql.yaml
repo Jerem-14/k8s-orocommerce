@@ -1,0 +1,23 @@
+{{- if and .Values.monitoring.enabled .Values.customMetrics.postgresql.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "monitoring.fullname" . }}-postgresql
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "monitoring.labels" . | nindent 4 }}
+    component: postgresql
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: database
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: {{ .Values.customMetrics.postgresql.scrapeInterval | default "30s" }}
+    scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+    - {{ .Release.Namespace }}
+{{- end }}

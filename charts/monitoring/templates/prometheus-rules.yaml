@@ -1,0 +1,150 @@
+{{- if .Values.monitoring.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "monitoring.fullname" . }}-orocommerce-alerts
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "monitoring.labels" . | nindent 4 }}
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+  - name: orocommerce.application
+    rules:
+    - alert: OroCommerceHighResponseTime
+      expr: avg(nginx_http_request_duration_seconds) > 2
+      for: 5m
+      labels:
+        severity: warning
+        service: orocommerce
+      annotations:
+        summary: "Temps de réponse OroCommerce élevé"
+        description: "Le temps de réponse moyen d'OroCommerce est élevé pendant plus de 5 minutes"
+
+    - alert: OroCommerceHighErrorRate
+      expr: rate(nginx_http_requests_total{status=~"5.."}[5m]) / rate(nginx_http_requests_total[5m]) > 0.05
+      for: 2m
+      labels:
+        severity: critical
+        service: orocommerce
+      annotations:
+        summary: "Taux d'erreur élevé sur OroCommerce"
+        description: "Le taux d'erreur 5xx est élevé pendant plus de 2 minutes"
+
+    - alert: OroCommerceLowTraffic
+      expr: rate(nginx_http_requests_total[5m]) < 0.1
+      for: 10m
+      labels:
+        severity: info
+        service: orocommerce
+      annotations:
+        summary: "Trafic faible sur OroCommerce"
+        description: "Le trafic est inférieur à 0.1 requête/s pendant plus de 10 minutes"
+
+  - name: orocommerce.php-fpm
+    rules:
+    - alert: PHPFPMHighLoad
+      expr: phpfpm_active_processes / phpfpm_total_processes > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        service: php-fpm
+      annotations:
+        summary: "Charge élevée sur PHP-FPM"
+        description: "PHP-FPM utilise plus de 80% de ses processus disponibles"
+
+    - alert: PHPFPMQueueBacklog
+      expr: phpfpm_listen_queue > 10
+      for: 2m
+      labels:
+        severity: critical
+        service: php-fpm
+      annotations:
+        summary: "File d'attente PHP-FPM surchargée"
+        description: "La file d'attente PHP-FPM contient plus de 10 requêtes en attente"
+
+    - alert: PHPFPMNoActiveProcesses
+      expr: phpfpm_active_processes == 0
+      for: 1m
+      labels:
+        severity: critical
+        service: php-fpm
+      annotations:
+        summary: "Aucun processus PHP-FPM actif"
+        description: "PHP-FPM n'a aucun processus actif depuis 1 minute"
+
+  - name: orocommerce.database
+    rules:
+    - alert: PostgreSQLHighConnections
+      expr: postgresql_connections_active / postgresql_connections_max > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        service: postgresql
+      annotations:
+        summary: "Nombre élevé de connexions PostgreSQL"
+        description: "PostgreSQL utilise plus de 80% de ses connexions maximales"
+
+    - alert: PostgreSQLSlowQueries
+      expr: rate(postgresql_slow_queries_total[5m]) > 5
+      for: 2m
+      labels:
+        severity: warning
+        service: postgresql
+      annotations:
+        summary: "Requêtes lentes détectées"
+        description: "Plus de 5 requêtes lentes par seconde détectées sur PostgreSQL"
+
+    - alert: PostgreSQLDatabaseDown
+      expr: up{job="postgresql"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        service: postgresql
+      annotations:
+        summary: "Base de données PostgreSQL indisponible"
+        description: "La base de données PostgreSQL n'est pas accessible depuis 1 minute"
+
+  - name: orocommerce.infrastructure
+    rules:
+    - alert: PodCrashLooping
+      expr: rate(kube_pod_container_status_restarts_total{pod=~".*orocommerce.*"}[5m]) > 0
+      for: 5m
+      labels:
+        severity: critical
+        service: kubernetes
+      annotations:
+        summary: "Pod OroCommerce en crash loop"
+        description: "Un pod OroCommerce redémarre fréquemment"
+
+    - alert: PodHighMemoryUsage
+      expr: container_memory_usage_bytes{pod=~".*orocommerce.*"} / container_spec_memory_limit_bytes > 0.9
+      for: 5m
+      labels:
+        severity: warning
+        service: kubernetes
+      annotations:
+        summary: "Utilisation mémoire élevée"
+        description: "Un pod OroCommerce utilise plus de 90% de sa mémoire allouée"
+
+    - alert: PodHighCPUUsage
+      expr: rate(container_cpu_usage_seconds_total{pod=~".*orocommerce.*"}[5m]) > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        service: kubernetes
+      annotations:
+        summary: "Utilisation CPU élevée"
+        description: "Un pod OroCommerce utilise plus de 80% de son CPU alloué"
+
+    - alert: PersistentVolumeUsage
+      expr: kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes > 0.85
+      for: 5m
+      labels:
+        severity: warning
+        service: kubernetes
+      annotations:
+        summary: "Espace disque faible"
+        description: "Un volume persistant utilise plus de 85% de son espace disponible"
+{{- end }}

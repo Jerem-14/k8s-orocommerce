@@ -113,3 +113,6 @@ cron:
 
 mail:
   enabled: true
+
+monitoring:
+  enabled: true

@@ -1,0 +1,23 @@
+{{- if and .Values.monitoring.enabled .Values.customMetrics.nginx.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "monitoring.fullname" . }}-nginx
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "monitoring.labels" . | nindent 4 }}
+    component: nginx
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: webserver
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: {{ .Values.customMetrics.nginx.scrapeInterval | default "30s" }}
+    scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+    - {{ .Release.Namespace }}
+{{- end }}
